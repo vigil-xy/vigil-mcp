@@ -1,0 +1,401 @@
+openapi: 3.1.0
+info:
+  title: Vigil MCP Bridge API
+  version: 0.1.0
+  description: |
+    HTTP bridge for vigil-mcp security scanning and cryptographic signing.
+    
+    This API provides secure access to Vigil's security scanning tools and 
+    cryptographic signing capabilities through a production-ready HTTP interface.
+    
+    **Security Notice:** This API exposes powerful security tools. Use with caution.
+    
+    **Authentication:** All endpoints require an API key passed in the `X-API-Key` header.
+    
+    **Rate Limiting:** Endpoints have rate limits to prevent abuse.
+  contact:
+    name: Vigil Security
+    url: https://vigil.ai
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://vigil-scan.fly.dev
+    description: Production server on Fly.io
+  - url: http://localhost:8080
+    description: Local development server
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Health
+    description: Health check and status endpoints
+  - name: Scanning
+    description: Security scanning operations (⚠️ Dangerous)
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check service health and dependency status
+      operationId: healthCheck
+      tags:
+        - Health
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /scan:
+    post:
+      summary: Run security scan
+      description: |
+        Run a Vigil security scan on the specified target.
+        
+        ⚠️ **DANGEROUS OPERATION:** This endpoint can scan systems and may reveal 
+        sensitive security information. Use only when explicitly authorized.
+        
+        **Rate Limit:** 10 requests/minute per IP
+      operationId: scan
+      tags:
+        - Scanning
+      x-openai-isConsequential: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+            examples:
+              host-scan:
+                summary: Scan local host
+                value:
+                  target: host
+                  dry_run: true
+              repo-scan:
+                summary: Scan repository
+                value:
+                  target: repo
+                  repo_url: https://github.com/example/repo
+                  dry_run: true
+      responses:
+        '200':
+          description: Scan completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResult'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /scan/signed:
+    post:
+      summary: Run security scan with cryptographic signature
+      description: |
+        Run a Vigil security scan and return cryptographically signed, 
+        tamper-evident results.
+        
+        ⚠️ **DANGEROUS OPERATION:** This endpoint can scan systems and create 
+        cryptographic signatures. Use only when explicitly authorized.
+        
+        **Rate Limit:** 5 requests/minute per IP (more restrictive due to signing overhead)
+      operationId: scanSigned
+      tags:
+        - Scanning
+      x-openai-isConsequential: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+      responses:
+        '200':
+          description: Signed scan completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignedScanResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /:
+    get:
+      summary: API information
+      description: Get basic information about the API
+      operationId: root
+      tags:
+        - Health
+      security: []
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  version:
+                    type: string
+                  description:
+                    type: string
+                  endpoints:
+                    type: object
+                  documentation:
+                    type: string
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        API key for authentication. Obtain from your Vigil account.
+
+  schemas:
+    ScanRequest:
+      type: object
+      required:
+        - target
+      properties:
+        target:
+          type: string
+          enum: [host, repo]
+          description: Target to scan - 'host' for local system or 'repo' for repository
+        repo_url:
+          type: string
+          description: Repository URL (required when target is 'repo')
+          example: https://github.com/example/repo
+        dry_run:
+          type: boolean
+          default: true
+          description: Run in dry-run mode without making changes
+
+    VerifyRequest:
+      type: object
+      required:
+        - payload
+        - signature
+        - purpose
+      properties:
+        payload:
+          type: object
+          description: The payload to verify
+        signature:
+          type: string
+          description: The signature to verify
+        purpose:
+          type: string
+          description: Purpose of the signature
+
+    ScanResult:
+      type: object
+      required:
+        - timestamp
+        - target
+        - findings
+        - summary
+        - raw_output
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of scan
+        target:
+          type: string
+          description: Target that was scanned
+        findings:
+          $ref: '#/components/schemas/Findings'
+        summary:
+          $ref: '#/components/schemas/Summary'
+        raw_output:
+          type: string
+          description: Raw output from vigil-scan
+        signature:
+          type: string
+          description: Cryptographic signature (for signed scans)
+          nullable: true
+        signature_metadata:
+          type: object
+          description: Signature metadata
+          nullable: true
+
+    Findings:
+      type: object
+      properties:
+        open_ports:
+          type: array
+          items:
+            type: object
+            properties:
+              port:
+                type: integer
+              service:
+                type: string
+              protocol:
+                type: string
+        file_findings:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              issue:
+                type: string
+              severity:
+                type: string
+        system_issues:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              description:
+                type: string
+              severity:
+                type: string
+
+    Summary:
+      type: object
+      required:
+        - risk_level
+        - total_findings
+      properties:
+        risk_level:
+          type: string
+          description: Overall risk level
+          enum: [unknown, low, medium, high, critical]
+        total_findings:
+          type: integer
+          description: Total number of findings
+
+    SignedScanResponse:
+      type: object
+      required:
+        - scan_result
+        - cryptographic_proof
+        - is_tamper_evident
+      properties:
+        scan_result:
+          $ref: '#/components/schemas/ScanResult'
+        cryptographic_proof:
+          type: object
+          description: Cryptographic proof of authenticity
+          properties:
+            signature:
+              type: string
+            timestamp:
+              type: string
+            algorithm:
+              type: string
+            metadata:
+              type: object
+        is_tamper_evident:
+          type: boolean
+          description: Whether this result is tamper-evident
+          default: true
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - mcp_server_available
+        - dependencies
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          description: Overall service status
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp
+        mcp_server_available:
+          type: boolean
+          description: Whether MCP server is available
+        dependencies:
+          type: object
+          description: Status of external dependencies
+          additionalProperties:
+            type: boolean
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Error message
+        detail:
+          type: string
+          description: Detailed error information
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp
+
+x-readme:
+  samples-languages:
+    - curl
+    - python
+    - javascript
+    - go

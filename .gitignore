@@ -7,3 +7,13 @@ dist/
 dist/
 *.log
 .DS_Store
+.env
+.env.local
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+venv/
+.pytest_cache/

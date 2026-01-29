@@ -165,19 +165,51 @@ This is the standard MCP deployment model used by:
 
 ### HTTP Deployment (Advanced)
 
-If you need to expose this as an HTTP service (e.g., for Fly.io deployment), you'll need to create a bridge server:
+**NEW: HTTP Bridge is now implemented!** 🎉
+
+The HTTP bridge provides REST API access to vigil-mcp, enabling Fly.io deployment and GPT Actions integration:
 
 ```
-[HTTP Client] --HTTP--> [Bridge Server] --stdio--> [vigil-mcp subprocess]
+[HTTP Client] --HTTPS--> [FastAPI Bridge] --stdio--> [vigil-mcp subprocess]
 ```
 
-The bridge server would:
-1. Accept HTTP requests
-2. Spawn vigil-mcp as a subprocess
-3. Route requests to stdin/stdout
-4. Return responses as HTTP
+**Features:**
+- ✅ REST API endpoints (POST /scan, POST /scan/signed, POST /verify)
+- ✅ API key authentication
+- ✅ Rate limiting (10/min for scans, 5/min for signed scans)
+- ✅ OpenAPI spec for GPT Actions
+- ✅ Health checks for Fly.io
+- ✅ Zero modifications to MCP core
 
-**Note:** A reference bridge server implementation is not included in this repository. The Dockerfile provided is for containerization of the MCP server itself, not for direct HTTP deployment.
+**Quick Start:**
+
+```bash
+# Install bridge dependencies
+pip install -r bridge/requirements.txt
+
+# Set API keys (for production)
+export API_KEYS="your-secret-key"
+
+# Run bridge server
+python3 -m bridge.server
+```
+
+**Deployment:**
+
+See [FLYIO_DEPLOYMENT.md](./FLYIO_DEPLOYMENT.md) for Fly.io deployment guide.
+
+**Documentation:**
+- [HTTP_BRIDGE_ARCHITECTURE.md](./HTTP_BRIDGE_ARCHITECTURE.md) - Architecture and design
+- [FLYIO_DEPLOYMENT.md](./FLYIO_DEPLOYMENT.md) - Deployment guide
+- [API_EXAMPLES.md](./API_EXAMPLES.md) - Usage examples in Python, JS, Go
+- [openapi.yaml](./openapi.yaml) - OpenAPI specification
+
+The bridge server:
+1. Accepts HTTP requests
+2. Spawns vigil-mcp as a subprocess
+3. Routes requests to stdin/stdout
+4. Returns responses as HTTP
+5. **Does not modify the MCP implementation**
 
 ## Development
 
