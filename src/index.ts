@@ -4,11 +4,15 @@ import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 const execFileAsync = promisify(execFile);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const projectRoot = join(__dirname, "..");
 
 const server = new Server(
   {
@@ -90,12 +94,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (dry_run) cmdArgs.push("--dry-run");
     }
 
-    if (target === "repo" && repo_url) {
+    if (target === "repo") {
+      if (!repo_url) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Error: repo_url is required when target is 'repo'",
+            },
+          ],
+          isError: true,
+        };
+      }
       cmdArgs.push("scan", "--repo", repo_url);
+      if (dry_run) cmdArgs.push("--dry-run");
     }
 
     try {
-      const { stdout } = await execFileAsync("vigil-scan", cmdArgs);
+      const { stdout, stderr } = await execFileAsync("vigil-scan", cmdArgs);
 
       return {
         content: [
@@ -106,11 +122,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         ],
       };
     } catch (error: any) {
+      const errorMessage = error.stderr
+        ? `Error running vigil-scan: ${error.message}\nStderr: ${error.stderr}`
+        : `Error running vigil-scan: ${error.message}`;
       return {
         content: [
           {
             type: "text",
-            text: `Error running vigil-scan: ${error.message}`,
+            text: errorMessage,
           },
         ],
         isError: true,
@@ -125,8 +144,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     };
 
     try {
-      const { stdout } = await execFileAsync("python3", [
-        "scripts/sign_proof.py",
+      const scriptPath = join(projectRoot, "scripts", "sign_proof.py");
+      const { stdout, stderr } = await execFileAsync("python3", [
+        scriptPath,
         JSON.stringify({ payload, purpose }),
       ]);
 
@@ -139,11 +159,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         ],
       };
     } catch (error: any) {
+      const errorMessage = error.stderr
+        ? `Error signing proof: ${error.message}\nStderr: ${error.stderr}`
+        : `Error signing proof: ${error.message}`;
       return {
         content: [
           {
             type: "text",
-            text: `Error signing proof: ${error.message}`,
+            text: errorMessage,
           },
         ],
         isError: true,
