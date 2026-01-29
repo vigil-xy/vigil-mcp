@@ -1,21 +1,22 @@
-# fly.toml app configuration file generated for vigil-scan on 2026-01-29T19:57:35Z
+# fly.toml app configuration file for vigil-mcp HTTP bridge
 #
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+# This configuration deploys the HTTP bridge server which exposes
+# vigil-mcp functionality via REST API endpoints.
 #
-# NOTE: This file is a placeholder. vigil-mcp is an MCP server that communicates via stdio,
-# not an HTTP service. To deploy on Fly.io, you'll need to:
-# 1. Create an HTTP bridge server that spawns vigil-mcp as a subprocess
-# 2. Update this configuration to point to the bridge server
-# 3. Remove the http_service section if deploying the bridge server
-#
-# See ARCHITECTURE.md for details on deployment models.
+# The bridge server spawns vigil-mcp as a subprocess and communicates
+# via stdin/stdout, providing a thin HTTP adapter layer.
 
 app = 'vigil-scan'
 primary_region = 'ams'
 
 [build]
 
-# This configuration assumes an HTTP bridge server (not currently implemented)
+[env]
+  PORT = "8080"
+  MCP_SERVER_PATH = "/app/build/index.js"
+  MAX_SCAN_TIMEOUT = "300"
+
+# HTTP service configuration
 [http_service]
   internal_port = 8080
   force_https = true
@@ -24,8 +25,19 @@ primary_region = 'ams'
   min_machines_running = 0
   processes = ['app']
 
+  # Health check configuration
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "10s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+    protocol = "http"
+    [http_service.checks.headers]
+      # Add any required headers for health checks
+
 [[vm]]
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 256
+  memory_mb = 512
