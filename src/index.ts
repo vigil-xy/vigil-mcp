@@ -16,56 +16,61 @@ const ReplicaLoadSchema = z.object({
 });
 
 const ReportReplicaArgsSchema = z.object({
-  vigilUrl: z.string().describe("Base URL of the Vigil server (e.g., https://status.example.com)"),
-  reporterToken: z.string().describe("Reporter token for authentication"),
-  probeId: z.string().describe("The parent probe identifier"),
-  nodeId: z.string().describe("The parent node identifier"),
-  replicaId: z.string().describe("The replica unique identifier (e.g., server LAN IP)"),
-  interval: z.number().describe("The push interval in seconds"),
+  vigilUrl: z.string().url().describe("Base URL of the Vigil server (e.g., https://status.example.com)"),
+  reporterToken: z.string().min(1).describe("Reporter token for authentication"),
+  probeId: z.string().min(1).describe("The parent probe identifier"),
+  nodeId: z.string().min(1).describe("The parent node identifier"),
+  replicaId: z.string().min(1).describe("The replica unique identifier (e.g., server LAN IP)"),
+  interval: z.number().int().min(1).max(86400).describe("The push interval in seconds (1-86400)"),
   load: ReplicaLoadSchema,
 });
 
 const FlushReplicaArgsSchema = z.object({
-  vigilUrl: z.string().describe("Base URL of the Vigil server"),
-  reporterToken: z.string().describe("Reporter token for authentication"),
-  probeId: z.string().describe("The parent probe identifier"),
-  nodeId: z.string().describe("The parent node identifier"),
-  replicaId: z.string().describe("The replica unique identifier"),
+  vigilUrl: z.string().url().describe("Base URL of the Vigil server"),
+  reporterToken: z.string().min(1).describe("Reporter token for authentication"),
+  probeId: z.string().min(1).describe("The parent probe identifier"),
+  nodeId: z.string().min(1).describe("The parent node identifier"),
+  replicaId: z.string().min(1).describe("The replica unique identifier"),
 });
 
 const ListAnnouncementsArgsSchema = z.object({
-  vigilUrl: z.string().describe("Base URL of the Vigil server"),
-  managerToken: z.string().describe("Manager token for authentication"),
+  vigilUrl: z.string().url().describe("Base URL of the Vigil server"),
+  managerToken: z.string().min(1).describe("Manager token for authentication"),
 });
 
 const InsertAnnouncementArgsSchema = z.object({
-  vigilUrl: z.string().describe("Base URL of the Vigil server"),
-  managerToken: z.string().describe("Manager token for authentication"),
-  title: z.string().describe("The title for the announcement"),
-  text: z.string().describe("The description text for the announcement"),
+  vigilUrl: z.string().url().describe("Base URL of the Vigil server"),
+  managerToken: z.string().min(1).describe("Manager token for authentication"),
+  title: z.string().min(1).describe("The title for the announcement"),
+  text: z.string().min(1).describe("The description text for the announcement"),
 });
 
 const RetractAnnouncementArgsSchema = z.object({
-  vigilUrl: z.string().describe("Base URL of the Vigil server"),
-  managerToken: z.string().describe("Manager token for authentication"),
-  announcementId: z.string().describe("The announcement identifier to be removed"),
+  vigilUrl: z.string().url().describe("Base URL of the Vigil server"),
+  managerToken: z.string().min(1).describe("Manager token for authentication"),
+  announcementId: z.string().min(1).describe("The announcement identifier to be removed"),
 });
 
 const ListProberAlertsArgsSchema = z.object({
-  vigilUrl: z.string().describe("Base URL of the Vigil server"),
-  managerToken: z.string().describe("Manager token for authentication"),
+  vigilUrl: z.string().url().describe("Base URL of the Vigil server"),
+  managerToken: z.string().min(1).describe("Manager token for authentication"),
 });
 
 const GetIgnoreRulesArgsSchema = z.object({
-  vigilUrl: z.string().describe("Base URL of the Vigil server"),
-  managerToken: z.string().describe("Manager token for authentication"),
+  vigilUrl: z.string().url().describe("Base URL of the Vigil server"),
+  managerToken: z.string().min(1).describe("Manager token for authentication"),
 });
 
 const UpdateIgnoreRulesArgsSchema = z.object({
-  vigilUrl: z.string().describe("Base URL of the Vigil server"),
-  managerToken: z.string().describe("Manager token for authentication"),
-  remindersSeconds: z.number().describe("Seconds during which downtime reminders should be skipped"),
+  vigilUrl: z.string().url().describe("Base URL of the Vigil server"),
+  managerToken: z.string().min(1).describe("Manager token for authentication"),
+  remindersSeconds: z.number().int().min(0).max(604800).describe("Seconds during which downtime reminders should be skipped (0-604800)"),
 });
+
+// Helper function to normalize URL by removing trailing slash
+function normalizeUrl(url: string): string {
+  return url.replace(/\/$/, '');
+}
 
 // Helper function to make HTTP requests
 async function makeRequest(
@@ -82,25 +87,41 @@ async function makeRequest(
     headers["Content-Type"] = "application/json; charset=utf-8";
   }
 
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  // Create abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-  const responseText = await response.text();
-  
-  if (!response.ok) {
-    throw new Error(
-      `HTTP ${response.status}: ${response.statusText}${responseText ? ` - ${responseText}` : ""}`
-    );
-  }
-
-  // Try to parse JSON response, or return text if not JSON
   try {
-    return responseText ? JSON.parse(responseText) : { success: true };
-  } catch {
-    return { success: true, response: responseText };
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const responseText = await response.text();
+    
+    if (!response.ok) {
+      // Don't include full response in error to avoid exposing sensitive data
+      throw new Error(
+        `HTTP ${response.status}: ${response.statusText}`
+      );
+    }
+
+    // Try to parse JSON response, or return text if not JSON
+    try {
+      return responseText ? JSON.parse(responseText) : { success: true };
+    } catch {
+      return { success: true, response: responseText };
+    }
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout: Vigil server did not respond within 30 seconds');
+    }
+    throw error;
   }
 }
 
@@ -352,7 +373,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     switch (name) {
       case "report_replica": {
         const validated = ReportReplicaArgsSchema.parse(args);
-        const url = `${validated.vigilUrl}/reporter/${validated.probeId}/${validated.nodeId}/`;
+        const baseUrl = normalizeUrl(validated.vigilUrl);
+        const url = `${baseUrl}/reporter/${validated.probeId}/${validated.nodeId}/`;
         const body = {
           replica: validated.replicaId,
           interval: validated.interval,
@@ -379,7 +401,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "flush_replica": {
         const validated = FlushReplicaArgsSchema.parse(args);
-        const url = `${validated.vigilUrl}/reporter/${validated.probeId}/${validated.nodeId}/${validated.replicaId}/`;
+        const baseUrl = normalizeUrl(validated.vigilUrl);
+        const url = `${baseUrl}/reporter/${validated.probeId}/${validated.nodeId}/${validated.replicaId}/`;
         const result = await makeRequest(url, "DELETE", validated.reporterToken);
         return {
           content: [
@@ -401,7 +424,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "list_announcements": {
         const validated = ListAnnouncementsArgsSchema.parse(args);
-        const url = `${validated.vigilUrl}/manager/announcements/`;
+        const baseUrl = normalizeUrl(validated.vigilUrl);
+        const url = `${baseUrl}/manager/announcements/`;
         const result = await makeRequest(url, "GET", validated.managerToken);
         return {
           content: [
@@ -415,7 +439,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "insert_announcement": {
         const validated = InsertAnnouncementArgsSchema.parse(args);
-        const url = `${validated.vigilUrl}/manager/announcement/`;
+        const baseUrl = normalizeUrl(validated.vigilUrl);
+        const url = `${baseUrl}/manager/announcement/`;
         const body = {
           title: validated.title,
           text: validated.text,
@@ -441,7 +466,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "retract_announcement": {
         const validated = RetractAnnouncementArgsSchema.parse(args);
-        const url = `${validated.vigilUrl}/manager/announcement/${validated.announcementId}/`;
+        const baseUrl = normalizeUrl(validated.vigilUrl);
+        const url = `${baseUrl}/manager/announcement/${validated.announcementId}/`;
         const result = await makeRequest(url, "DELETE", validated.managerToken);
         return {
           content: [
@@ -463,7 +489,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "list_prober_alerts": {
         const validated = ListProberAlertsArgsSchema.parse(args);
-        const url = `${validated.vigilUrl}/manager/prober/alerts/`;
+        const baseUrl = normalizeUrl(validated.vigilUrl);
+        const url = `${baseUrl}/manager/prober/alerts/`;
         const result = await makeRequest(url, "GET", validated.managerToken);
         return {
           content: [
@@ -477,7 +504,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "get_alert_ignore_rules": {
         const validated = GetIgnoreRulesArgsSchema.parse(args);
-        const url = `${validated.vigilUrl}/manager/prober/alerts/ignored/`;
+        const baseUrl = normalizeUrl(validated.vigilUrl);
+        const url = `${baseUrl}/manager/prober/alerts/ignored/`;
         const result = await makeRequest(url, "GET", validated.managerToken);
         return {
           content: [
@@ -491,7 +519,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "update_alert_ignore_rules": {
         const validated = UpdateIgnoreRulesArgsSchema.parse(args);
-        const url = `${validated.vigilUrl}/manager/prober/alerts/ignored/`;
+        const baseUrl = normalizeUrl(validated.vigilUrl);
+        const url = `${baseUrl}/manager/prober/alerts/ignored/`;
         const body = {
           reminders_seconds: validated.remindersSeconds,
         };
@@ -520,8 +549,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new Error(
-        `Invalid arguments: ${error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ")}`
+        `Invalid arguments for tool '${name}': ${error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ")}`
       );
+    }
+    if (error instanceof Error) {
+      throw new Error(`Error in tool '${name}': ${error.message}`);
     }
     throw error;
   }
