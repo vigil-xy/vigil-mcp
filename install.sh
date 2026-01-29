@@ -4,19 +4,19 @@ set -e
 echo "🔐 Installing Vigil Lab..."
 
 # Check Node
-if ! command -v node &>/dev/null 2>&1; then
+if ! command -v node &>/dev/null; then
   echo "❌ Node.js not found. Please install Node 20+"
   exit 1
 fi
 
 # Check Python
-if ! command -v python3 &>/dev/null 2>&1; then
+if ! command -v python3 &>/dev/null; then
   echo "❌ Python3 not found"
   exit 1
 fi
 
 # Install vigil-scan
-if ! command -v vigil-scan &>/dev/null 2>&1; then
+if ! command -v vigil-scan &>/dev/null; then
   echo "Installing vigil-scan..."
   curl -fsSL https://releases.vigil.ai/vigil-scan-$(uname | tr '[:upper:]' '[:lower:]') \
     -o /usr/local/bin/vigil-scan
@@ -24,10 +24,12 @@ if ! command -v vigil-scan &>/dev/null 2>&1; then
 fi
 
 # Install Python signer
-pip3 install vigil-cryptographicsign >/dev/null
+echo "Installing vigil-cryptographicsign..."
+pip3 install vigil-cryptographicsign 2>&1 | grep -v "Requirement already satisfied" || true
 
 # Install MCP server
-npm install -g vigil-mcp >/dev/null
+echo "Installing vigil-mcp..."
+npm install -g vigil-mcp 2>&1 | grep -v "up to date" || true
 
 echo ""
 echo "✅ Vigil installed."

@@ -55,8 +55,8 @@ The server communicates over stdio and is compatible with MCP clients like Claud
 
 Add this server to your MCP client configuration. For example, with Claude Desktop, add to your config file:
 
-**MacOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **MacOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -106,7 +106,7 @@ Sign an action payload with cryptographic proof.
 ## Requirements
 
 - Node.js v20+
-- Python 3 with `vigil_cryptographicsign` module
+- Python 3 with `vigil-cryptographicsign` package (install with: `pip3 install vigil-cryptographicsign`)
 - `vigil-scan` command-line tool
 
 ## Development

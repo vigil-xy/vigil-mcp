@@ -89,6 +89,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       dry_run?: boolean;
     };
 
+    // Validate target parameter
+    if (target !== "host" && target !== "repo") {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error: target must be either "host" or "repo", got "${target}"`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
     const cmdArgs: string[] = [];
 
     if (target === "host") {
@@ -124,6 +137,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         ],
       };
     } catch (error: any) {
+      if (error.code === "ENOENT") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Error: vigil-scan command not found. Please install vigil-scan: https://releases.vigil.ai/",
+            },
+          ],
+          isError: true,
+        };
+      }
       const errorMessage = error.stderr
         ? `Error running vigil-scan: ${error.message}\nStderr: ${error.stderr}`
         : `Error running vigil-scan: ${error.message}`;
@@ -161,6 +185,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         ],
       };
     } catch (error: any) {
+      if (error.code === "ENOENT") {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Error: python3 not found. Please install Python 3.",
+            },
+          ],
+          isError: true,
+        };
+      }
       const errorMessage = error.stderr
         ? `Error signing proof: ${error.message}\nStderr: ${error.stderr}`
         : `Error signing proof: ${error.message}`;
