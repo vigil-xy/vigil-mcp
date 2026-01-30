@@ -12,8 +12,6 @@ This MCP server exposes Vigil's security scanning and cryptographic proof tools.
 
 This is an **MCP (Model Context Protocol) server** that communicates via stdio, designed to be launched as a subprocess by MCP clients like Claude Desktop, Cursor, and other MCP-aware agents.
 
-**Important:** This is NOT an HTTP service and cannot be directly deployed as a standalone web server on platforms like Fly.io. It requires an MCP client to invoke it.
-
 ## Quick Install
 
 The fastest way to get started:
@@ -144,12 +142,35 @@ Sign an arbitrary action payload with cryptographic proof.
 ## Requirements
 
 - Node.js v20+
-- Python 3 with `vigil-cryptographicsign` package (install with: `pip3 install vigil-cryptographicsign`)
-- `vigil-scan` command-line tool (from https://releases.vigil.ai/)
+- Python 3 with `vigil-cryptographicsign` package
+- `vigil-scan` command-line tool
+
+### Installing vigil-scan
+
+The `vigil-scan` tool must be installed separately:
+
+**macOS:**
+```bash
+curl -fsSL https://releases.vigil.ai/vigil-scan-macos -o /usr/local/bin/vigil-scan
+chmod +x /usr/local/bin/vigil-scan
+```
+
+**Linux:**
+```bash
+curl -fsSL https://releases.vigil.ai/vigil-scan-linux -o /usr/local/bin/vigil-scan
+chmod +x /usr/local/bin/vigil-scan
+```
+
+**Windows:**
+Download the executable from https://releases.vigil.ai/vigil-scan-windows.exe
+
+### Installing Python Dependencies
+
+```bash
+pip3 install vigil-cryptographicsign
+```
 
 ## Deployment Architecture
-
-### MCP Client Integration (Recommended)
 
 This server is designed to be used as a subprocess by MCP clients:
 
@@ -162,54 +183,6 @@ This is the standard MCP deployment model used by:
 - Cursor
 - VS Code with MCP extensions
 - Custom MCP client applications
-
-### HTTP Deployment (Advanced)
-
-**NEW: HTTP Bridge is now implemented!** 🎉
-
-The HTTP bridge provides REST API access to vigil-mcp, enabling Fly.io deployment and GPT Actions integration:
-
-```
-[HTTP Client] --HTTPS--> [FastAPI Bridge] --stdio--> [vigil-mcp subprocess]
-```
-
-**Features:**
-- ✅ REST API endpoints (POST /scan, POST /scan/signed, POST /verify)
-- ✅ API key authentication
-- ✅ Rate limiting (10/min for scans, 5/min for signed scans)
-- ✅ OpenAPI spec for GPT Actions
-- ✅ Health checks for Fly.io
-- ✅ Zero modifications to MCP core
-
-**Quick Start:**
-
-```bash
-# Install bridge dependencies
-pip install -r bridge/requirements.txt
-
-# Set API keys (for production)
-export API_KEYS="your-secret-key"
-
-# Run bridge server
-python3 -m bridge.server
-```
-
-**Deployment:**
-
-See [FLYIO_DEPLOYMENT.md](./FLYIO_DEPLOYMENT.md) for Fly.io deployment guide.
-
-**Documentation:**
-- [HTTP_BRIDGE_ARCHITECTURE.md](./HTTP_BRIDGE_ARCHITECTURE.md) - Architecture and design
-- [FLYIO_DEPLOYMENT.md](./FLYIO_DEPLOYMENT.md) - Deployment guide
-- [API_EXAMPLES.md](./API_EXAMPLES.md) - Usage examples in Python, JS, Go
-- [openapi.yaml](./openapi.yaml) - OpenAPI specification
-
-The bridge server:
-1. Accepts HTTP requests
-2. Spawns vigil-mcp as a subprocess
-3. Routes requests to stdin/stdout
-4. Returns responses as HTTP
-5. **Does not modify the MCP implementation**
 
 ## Development
 
