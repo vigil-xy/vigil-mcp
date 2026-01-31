@@ -88,7 +88,9 @@ async function listContainers(): Promise<ContainerInfo[]> {
         // Check for dangerous ports
         const dangerousPorts = ['21', '23', '3306', '5432', '6379', '27017'];
         for (const port of dangerousPorts) {
-          if (ports.includes(`:${port}->`)) {
+          // Use word boundary to match exact port numbers
+          const portRegex = new RegExp(`\\b${port}\\b`);
+          if (portRegex.test(ports)) {
             issues.push({
               description: `Dangerous port ${port} exposed`,
               severity: 'high',

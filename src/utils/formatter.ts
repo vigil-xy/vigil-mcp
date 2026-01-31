@@ -128,7 +128,9 @@ export function formatReport(report: ScanReport, includeDetails: boolean = true)
       lines.push('');
       lines.push('Top Vulnerabilities:');
       report.dependencies.vulnerabilities.slice(0, 5).forEach((vuln) => {
-        lines.push(`  ${getSeverityIcon(vuln.severity as any)} ${vuln.name} (${vuln.version})`);
+        // Map 'moderate' to 'medium' for severity icon
+        const severity = vuln.severity === 'moderate' ? 'medium' : vuln.severity;
+        lines.push(`  ${getSeverityIcon(severity as any)} ${vuln.name} (${vuln.version})`);
         lines.push(`     ${vuln.description.substring(0, 80)}`);
       });
       if (report.dependencies.vulnerabilities.length > 5) {

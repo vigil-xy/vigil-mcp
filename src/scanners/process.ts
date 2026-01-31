@@ -68,10 +68,17 @@ async function findSuspiciousProcesses(): Promise<ProcessInfo[]> {
       for (const { pattern, description, severity } of SUSPICIOUS_PATTERNS) {
         if (pattern.test(line)) {
           const parts = line.split(/\s+/);
+          // Extract PID and user from known positions, command from the rest
+          const pid = parts[1] || 'unknown';
+          const user = parts[0] || 'unknown';
+          // Command starts after the first few fields - take everything after CPU/MEM/TIME
+          const commandStartIndex = parts.findIndex((p, i) => i > 7 && !p.match(/^\d/));
+          const command = commandStartIndex > 0 ? parts.slice(commandStartIndex).join(' ') : line.substring(line.indexOf(parts[7] || ''));
+          
           suspicious.push({
-            pid: parts[1] || 'unknown',
-            user: parts[0] || 'unknown',
-            command: line.substring(line.indexOf(parts[10] || '')),
+            pid,
+            user,
+            command: command.substring(0, 150),
             issue: description,
             severity,
           });
@@ -81,10 +88,16 @@ async function findSuspiciousProcesses(): Promise<ProcessInfo[]> {
       // Check for processes running from /tmp
       if (line.includes('/tmp/') && !line.includes('grep')) {
         const parts = line.split(/\s+/);
+        const pid = parts[1] || 'unknown';
+        const user = parts[0] || 'unknown';
+        // Extract command from the rest of the line
+        const commandStartIndex = parts.findIndex((p, i) => i > 7 && !p.match(/^\d/));
+        const command = commandStartIndex > 0 ? parts.slice(commandStartIndex).join(' ') : line.substring(line.indexOf(parts[7] || ''));
+        
         suspicious.push({
-          pid: parts[1] || 'unknown',
-          user: parts[0] || 'unknown',
-          command: line.substring(line.indexOf(parts[10] || '')),
+          pid,
+          user,
+          command: command.substring(0, 150),
           issue: 'Process running from /tmp directory',
           severity: 'high',
         });
