@@ -23,7 +23,9 @@ program
   .option('--no-sign', 'Skip cryptographic signing')
   .action(async (options) => {
     try {
-      console.log('🔍 Starting Vigil Security Scan...\n');
+      if (!options.json) {
+        console.log('🔍 Starting Vigil Security Scan...\n');
+      }
 
       // Run the scan
       const report = await runFullScan();
@@ -41,9 +43,13 @@ program
           signature = signData(reportJson, keys.privateKey);
           publicKey = keys.publicKey;
 
-          console.log('✅ Report cryptographically signed\n');
+          if (!options.json) {
+            console.log('✅ Report cryptographically signed\n');
+          }
         } catch (error: any) {
-          console.error('⚠️  Warning: Could not sign report:', error.message);
+          if (!options.json) {
+            console.error('⚠️  Warning: Could not sign report:', error.message);
+          }
         }
       }
 
@@ -66,7 +72,7 @@ program
 
         if (options.output) {
           await writeFile(options.output, output);
-          console.log(`\n📄 Report saved to: ${options.output}`);
+          console.error(`\n📄 Report saved to: ${options.output}`);
         }
       } else {
         const formattedReport = formatReport(report);
