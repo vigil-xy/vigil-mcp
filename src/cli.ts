@@ -11,8 +11,8 @@ import { homedir } from 'os';
 const program = new Command();
 
 program
-  .name('vigil')
-  .description('Production-ready security scanner CLI tool')
+  .name('vygil')
+  .description('MCP security scanner - comprehensive security auditing tool')
   .version('0.1.0');
 
 program

@@ -64,7 +64,7 @@ function parseScanOutput(stdout: string, target: string): ScanResult {
 
 const server = new Server(
   {
-    name: "vigil-mcp",
+    name: "vygil",
     version: "0.1.0",
   },
   {
@@ -79,8 +79,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: "vigil.scan",
-        description: "Run Vigil security scan on host or repository (returns structured data)",
+        name: "vygil.scan",
+        description: "Run Vygil security scan on host or repository (returns structured data)",
         inputSchema: {
           type: "object",
           properties: {
@@ -103,8 +103,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: "vigil.scan.signed",
-        description: "Run Vigil security scan and return cryptographically signed, tamper-evident results",
+        name: "vygil.scan.signed",
+        description: "Run Vygil security scan and return cryptographically signed, tamper-evident results",
         inputSchema: {
           type: "object",
           properties: {
@@ -127,7 +127,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: "vigil.proof.sign",
+        name: "vygil.proof.sign",
         description: "Sign action payload with cryptographic proof",
         inputSchema: {
           type: "object",
@@ -152,7 +152,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
-  if (name === "vigil.scan" || name === "vigil.scan.signed") {
+  if (name === "vygil.scan" || name === "vygil.scan.signed") {
     const { target, repo_url, dry_run = true } = args as {
       target: "host" | "repo";
       repo_url?: string;
@@ -200,7 +200,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const scanResult = parseScanOutput(stdout, target === "host" ? "localhost" : repo_url || "unknown");
 
       // If this is a signed scan, sign the results
-      if (name === "vigil.scan.signed") {
+      if (name === "vygil.scan.signed") {
         try {
           const scriptPath = join(projectRoot, "scripts", "sign_proof.py");
           const { stdout: signedOutput } = await execFileAsync("python3", [
@@ -286,7 +286,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   }
 
-  if (name === "vigil.proof.sign") {
+  if (name === "vygil.proof.sign") {
     const { payload, purpose } = args as {
       payload: any;
       purpose: string;

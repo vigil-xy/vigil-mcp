@@ -1,6 +1,23 @@
-# Vigil Security Scanner
+# Vygil Security Scanner
 
-A comprehensive, production-ready security scanning tool for developers and startups. Vigil performs deep security audits of your system and generates cryptographically signed, tamper-evident reports.
+**A comprehensive MCP (Model Context Protocol) security scanner for developers and startups**
+
+Vygil performs deep security audits of your system and generates cryptographically signed, tamper-evident reports. It integrates seamlessly with AI assistants like Claude Desktop and Cursor through the Model Context Protocol.
+
+## What is Vygil?
+
+Vygil is a **production-ready security scanner** designed for:
+- 🔍 **Comprehensive Security Auditing**: Scans networks, processes, filesystems, dependencies, configurations, and containers
+- 🔐 **Cryptographic Signing**: Every scan report is cryptographically signed using Ed25519 signatures with SHA-256 hashing
+- 🤖 **AI Integration**: Exposes security scanning capabilities to AI assistants via MCP (Model Context Protocol)
+- 🚀 **Developer-Friendly**: Simple CLI interface and easy integration into development workflows
+
+Vygil helps developers and security teams:
+- Identify security vulnerabilities in their local development environment
+- Detect exposed secrets, weak file permissions, and dangerous configurations
+- Audit dependencies for known vulnerabilities
+- Monitor container and network security
+- Generate tamper-evident security reports for compliance and auditing
 
 ## Features
 
@@ -23,19 +40,21 @@ Includes an MCP (Model Context Protocol) server that exposes security scanning t
 
 ## Installation
 
-### For End Users (Global Install)
+### Quick Install (Recommended)
+
+Install globally via npm:
 
 ```bash
-npm install -g vigil-security-scanner
+npm install -g vygil
 ```
 
-Or use directly with npx:
+Or use directly with npx (no installation required):
 
 ```bash
-npx vigil-security-scanner scan
+npx vygil scan
 ```
 
-### For Developers (From Source)
+### From Source (For Developers)
 
 ```bash
 # 1. Clone the repository
@@ -48,7 +67,7 @@ npm install
 # 3. Build the project
 npm run build
 
-# 4. (Optional) Link globally
+# 4. (Optional) Link globally for local development
 npm link
 ```
 
@@ -56,46 +75,50 @@ npm link
 
 ### CLI Commands
 
+Vygil provides a powerful command-line interface for security scanning:
+
 #### Run a Security Scan
 
 ```bash
 # Basic scan with cryptographic signing
-vigil scan
+vygil scan
 
 # Output as JSON
-vigil scan --json
+vygil scan --json
 
 # Save report to file
-vigil scan -o report.json
+vygil scan -o report.json
 
 # Skip cryptographic signing
-vigil scan --no-sign
+vygil scan --no-sign
 
 # Combined options
-vigil scan --json -o report.json
+vygil scan --json -o report.json
 ```
 
 #### Verify a Report
 
-```bash
-vigil verify report.json
-```
+Verify the cryptographic signature to ensure the report hasn't been tampered with:
 
-This verifies the cryptographic signature to ensure the report hasn't been tampered with.
+```bash
+vygil verify report.json
+```
 
 #### Manage Cryptographic Keys
 
 ```bash
 # Generate new Ed25519 key pair
-vigil keys --generate
+vygil keys --generate
 
 # Show your public key
-vigil keys --show-public
+vygil keys --show-public
 ```
 
 Keys are stored in `~/.vigil/keys/` directory.
 
 ### Using from Source
+
+If you've cloned the repository:
 
 ```bash
 # Run CLI directly
@@ -113,11 +136,13 @@ node build/cli.js keys --generate
 
 ### MCP Server (AI Integration)
 
+Vygil includes an MCP server that exposes security scanning tools to AI assistants.
+
 #### Start the MCP Server
 
 ```bash
 # If installed globally
-vigil-mcp
+vygil-mcp
 
 # From source
 npm start
@@ -125,15 +150,30 @@ npm start
 node build/index.js
 ```
 
-#### Configure AI Assistant
+#### Configure AI Assistant (e.g., Claude Desktop)
 
-Add to your AI assistant's MCP configuration (e.g., Claude Desktop):
+Add to your AI assistant's MCP configuration file:
+
+**For Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
 ```json
 {
   "mcpServers": {
-    "vigil": {
-      "command": "vigil-mcp"
+    "vygil": {
+      "command": "vygil-mcp"
+    }
+  }
+}
+```
+
+**For Cursor** (`.cursor/mcp_config.json` in your project):
+
+```json
+{
+  "mcpServers": {
+    "vygil": {
+      "command": "npx",
+      "args": ["vygil-mcp"]
     }
   }
 }
@@ -141,15 +181,20 @@ Add to your AI assistant's MCP configuration (e.g., Claude Desktop):
 
 #### Available MCP Tools
 
-- `vigil.scan` - Run security scan on host or repository
-- `vigil.scan.signed` - Run security scan with cryptographic signing
-- `vigil.proof.sign` - Sign action payloads with cryptographic proof
+Once configured, your AI assistant will have access to:
+
+- `vygil.scan` - Run security scan on host or repository (returns structured data)
+- `vygil.scan.signed` - Run security scan with cryptographic signing (returns tamper-evident results)
+- `vygil.proof.sign` - Sign action payloads with cryptographic proof
 
 #### Example AI Prompts
 
-- "Scan my system for security issues"
-- "Run a signed security scan and give me a report"
+Try these prompts with your AI assistant:
+
+- "Use vygil to scan my system for security issues"
+- "Run a signed security scan and give me a detailed report"
 - "Check for vulnerabilities on this host"
+- "Scan my development environment and identify any exposed secrets"
 
 ## Security Checks
 
@@ -237,7 +282,7 @@ npm run dev
 
 ## Architecture
 
-**Vigil** is a dual-purpose security tool:
+**Vygil** is a dual-purpose security tool:
 
 1. **CLI Scanner**: Standalone command-line tool for comprehensive local security auditing
 2. **MCP Server**: Exposes security scanning capabilities to AI assistants via Model Context Protocol
@@ -247,7 +292,7 @@ The tool uses a modular scanner design where each security domain (network, proc
 ## Output Example
 
 ```
-🔍 Starting Vigil Security Scan...
+🔍 Starting Vygil Security Scan...
 
 ✅ Report cryptographically signed
 
@@ -277,4 +322,4 @@ MIT
 
 ## Author
 
-Vigil Security Team
+Vygil Security Team

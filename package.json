@@ -1,12 +1,12 @@
 {
-  "name": "vigil-security-scanner",
+  "name": "vygil",
   "version": "0.1.0",
-  "description": "Production-ready security scanner CLI tool for developers and startups",
+  "description": "MCP security scanner - comprehensive security auditing tool for developers and startups",
   "type": "module",
   "main": "build/index.js",
   "bin": {
-    "vigil": "./build/cli.js",
-    "vigil-mcp": "./build/index.js"
+    "vygil": "./build/cli.js",
+    "vygil-mcp": "./build/index.js"
   },
   "scripts": {
     "build": "tsc && chmod 755 build/cli.js build/index.js",
@@ -16,10 +16,13 @@
   "keywords": [
     "security",
     "scanner",
-    "vigil",
+    "vygil",
     "cryptographic",
     "cli",
-    "mcp"
+    "mcp",
+    "model-context-protocol",
+    "security-audit",
+    "vulnerability-scanner"
   ],
   "author": "",
   "license": "MIT",
