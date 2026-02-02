@@ -5,7 +5,7 @@ export function formatReport(report: ScanReport, includeDetails: boolean = true)
 
   // Header
   lines.push('═══════════════════════════════════════════════════════════════');
-  lines.push('                    VIGIL SECURITY SCAN REPORT                 ');
+  lines.push('                  VYGIL SECURITY SCAN REPORT                   ');
   lines.push('═══════════════════════════════════════════════════════════════');
   lines.push('');
   lines.push(`Timestamp: ${report.timestamp}`);
